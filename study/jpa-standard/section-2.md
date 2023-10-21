@@ -18,7 +18,7 @@ JPA는 특정 데이터베이스의 SQL을 방언을 통해 해결해주기 때�
 
 ## JPA 사용
 
-JPA를 사용하기 위해선 persistence.xml에 있는 설정 정보를 토대로 `EntityManagerFactory`를 생성해야한다. 그리고 `EntityManager`를 만들어 준다. `EntityManager`를 통해 데이터베이스에 CRUD를 할 수 있다.
+JPA를 사용하기 위해선 `persistence.xml`에 있는 설정 정보를 토대로 `EntityManagerFactory`를 생성해야한다. 그리고 `EntityManager`를 만들어 준다. `EntityManager`를 통해 데이터베이스에 CRUD를 할 수 있다.
 
 <figure><img src="../../.gitbook/assets/화면 캡처 2023-10-21 195135.png" alt="" width="563"><figcaption></figcaption></figure>
 
