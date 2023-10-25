@@ -86,3 +86,99 @@ Member findMember2 = em.find(Member.class, "member2");
 
 <figure><img src="../../.gitbook/assets/화면 캡처 2023-10-24 185225.png" alt=""><figcaption></figcaption></figure>
 
+#### 동일성 보장
+
+같은 트랜잭션에서 식별자가 같은 데이터를 조회하면 1차 캐시에서 객체를 반환하기 때문에 두 객체는 동일하다.
+
+```java
+Member findMember1 = em.find(Member.class, "member1");
+Member findMember2 = em.find(Member.class, "member1");
+
+findMember1 == findMember2   // true
+```
+
+#### 트랜잭션을 지원하는 쓰기 지연
+
+엔티티를 영속화한 시점에 데이터베이스에 SQL을 보내지 않고 트랜잭션 커밋 시점에 SQL을 보낸다.
+
+```java
+EntityTansaction tx = em.getTransaction();
+tx.begin();    // 트랜잭션 시작
+
+em.persist(memberA);    // 1차 캐시에 저장, INSERT SQL 보내지 않음
+em.persist(memberB);    // 1차 캐시에 저장, INSERT SQL 보내지 않음
+
+tx.commit();    // 트랜잭션 커밋, 데이터베이스에 INSERT SQL 보냄
+```
+
+엔티티를 `em.persist()`로 영속화하면 1차 캐시에 엔티티가 저장되고 INSERT SQL을 생성한 후 쓰기 지연 저장소에 저장한다.
+
+<figure><img src="../../.gitbook/assets/화면 캡처 2023-10-25 154936.png" alt=""><figcaption></figcaption></figure>
+
+트랜잭션을 커밋할 때 쓰기 지연 저장소에 있는 SQL을 데이터베이스로 보낸다.
+
+<figure><img src="../../.gitbook/assets/화면 캡처 2023-10-25 155604.png" alt=""><figcaption></figcaption></figure>
+
+#### 변경 감지
+
+JPA는 영속성 컨텍스트의 1차 캐시에 데이터가 처음 저장될 때 스냅샷을 뜬다. 트랜잭션 커밋 시점에 스냅샷과 엔티티의 내용을 비교, 내용이 다르면 UPDATE 쿼리를 날린다.
+
+```java
+Member member = em.find(Member.class, "memberA");  // 데이터 조회
+member.setUsername("memberAAA"); // 데이터 변경
+
+tx.commit(); // 트랜잭션 커밋, 변경내용 반영
+```
+
+<figure><img src="../../.gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+
+데이터를 삭제할 땐 `em.remove()`를 사용하면 트랜잭션 커밋 시점에 delete 쿼리가 나간다.
+
+```java
+Member member = em.find(Member.class, "memberA");
+em.remove(member);
+
+tx.commit();
+```
+
+## 플러시
+
+#### 플러시란?
+
+영속성 컨텍스트의 변경 내용을 데이터베이스에 반영하는 것을 말한다. 플러시가 발생하면 변경 감지가 일어나고, 쓰기 지연 SQL 저장소의 쿼리를 데이터베이스이 전송한다.
+
+영속성 컨텍스트를 플러시하는 방법에는 3가지가 있다.
+
+* `em.flush()` - 직접 호출
+* 트랜잭션 커밋 - 플러시 자동 호출
+* JPQL 쿼리 실행 - 플러시 자동 호출
+
+#### JPQL 쿼리 실행시 플러시가 자동 호출되는 이유가 뭘까?
+
+`em.persist()`로 엔티티를 영속화 하면 커밋하기 전까지 DB에 반영되지 않는다. 그래서 JPQL로 DB를 조회하게 되면 DB에는 저장된 데이터가 없기 때문에 의도한대로 동작이 안될 수 있다. JPA는 이 문제가 발생하지 않도록 JPQL 쿼리를 실행하면 플러시를 발생해서 의도한대로 동작하도록 한다.
+
+```java
+// 1차 캐시 저장, DB 반영 안됨
+em.persist(memberA);
+em.persist(memberB);
+
+// 플러시 발생 후 DB 조회
+List<Member> members = em.createQuery("select m from Member m", Member.class)
+        .getResultList();
+```
+
+#### 플러시 모드 옵션
+
+* `em.setFlushMode(FlushModeType.COMMIT)`
+* `FlushModeType.AUTO` - 커밋이나 쿼리를 실행할 때 플러시 (기본값)
+* `FlushModeType.COMMIT` - 커밋할 때만 플러시
+
+
+
+{% hint style="success" %}
+#### **플러시 짚고 넘어가기**
+
+* 영속성 컨텍스트를 비우지 않음
+* 영속성 컨텍스트의 변경내용을 데이터베이스에 동기화
+* 트랜잭션이라는 작업 단위가 중요 -> 커밋 직전에만 동기화 하면 됨
+{% endhint %}
